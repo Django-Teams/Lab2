@@ -1,89 +1,49 @@
-from core.database.Database import Database
+from peewee import MySQLDatabase
+
 from model.Dish import Dish
 from model.Ingredient import Ingredient
+from model.DishIngredient import DishIngredient
 
+database = MySQLDatabase(database='django_lab2', user='root', password='', host='localhost')
 
 class DishRepository:
 
     def get_dishes(self) -> list[Dish]:
-        query = """SELECT d.*, i.*, di.count FROM dishes d 
-                    INNER JOIN dish_ingredients di ON d.id=di.dish_id 
-                    INNER JOIN ingredients i ON i.id=di.ingredient_id"""
-
         dishes = []
-
-        with Database() as con:
-            cursor = con.cursor()
-            cursor.execute(query)
-
-            data = {}
-            for row in cursor.fetchall():
-                if row[0] not in data.keys():
-                    data[row[0]] = [row]
-                else:
-                    data[row[0]].append(row)
-
-            for d in data.values():
-                dishes.append(self.__extract_dish(d))
+        query = Dish.select(Dish, Ingredient).join(DishIngredient).join(Ingredient)
+        count = 0
+        names = []
+        for dish in query:
+            if dish.name in names:
+                continue
+            names.append(dish.name)
+            count += 1
+            ingredients = []
+            for di in dish.ingredients:
+                ingredients.append(di.ingredient)
+            dishes.append(Dish(id=dish.id, name=dish.name, ingredients=ingredients, ))
 
         return dishes
 
-    def create(self, dish: Dish):
-        query1 = """INSERT INTO dishes VALUES(null,%s)"""
-        query2 = """INSERT INTO dish_ingredients VALUES(null,%s,%s,%s)"""
+    def create(self, name: str, ingredients: list):
+        with database.atomic():
+            dish = Dish.create(name=name)
+            for ingredient in ingredients:
+                DishIngredient.create(dish=dish.id, ingredient=ingredient.id, count=200)
+        return dish.id
 
-        ingredients = []
-        with Database() as con:
-            con.autocommit = False
-            cursor = con.cursor()
-            cursor.execute(query1, (dish.name,))
-            idx = cursor.lastrowid
-            for ing in dish.ingredients:
-                ingredients.append((idx, ing.idx, ing.count))
-            cursor.executemany(query2, ingredients)
+    def update(self, dish: Dish, ingredients: list):
+        with database.atomic():
+            existing_dish = Dish.get_by_id(dish.id)
+            existing_dish.name = dish.name
+            existing_dish.save()
 
-            con.commit()
+            DishIngredient.delete().where(DishIngredient.dish == existing_dish).execute()
 
-        return idx
-
-    def update(self, dish: Dish):
-        query1 = """UPDATE dishes SET name=%s WHERE id=%s"""
-        query2 = """DELETE FROM dish_ingredients WHERE dish_id=%s"""
-        query3 = """INSERT INTO dish_ingredients VALUES(null,%s,%s,%s)"""
-
-        ingredients = []
-        with Database() as con:
-            con.autocommit = False
-            cursor = con.cursor()
-            cursor.execute(query1, (dish.name, dish.idx))
-            print(dish.idx)
-            cursor.execute(query2, (dish.idx,))
-
-            for ing in dish.ingredients:
-                ingredients.append((dish.idx, ing.idx, ing.count))
-            cursor.executemany(query3, ingredients)
-
-            con.commit()
+            for ingredient in ingredients:
+                DishIngredient.create(dish=existing_dish, ingredient=ingredient, count=200)
 
     def delete(self, dish: Dish):
-        query1 = """DELETE FROM dishes WHERE id=%s"""
-
-        with Database() as con:
-            cursor = con.cursor()
-            cursor.execute(query1, (dish.idx,))
-            con.commit()
-
-    def __extract_dish(self, data: list) -> Dish:
-        """
-        Convert result data to Dish object
-        :param data:
-        :return:
-        """
-        ingredients = []
-        for i in data:
-            ingredient = Ingredient(i[3], i[4], i[5], i[2])
-            ingredients.append((ingredient, i[6]))
-
-        dish = Dish(data[0][1], ingredients, data[0][0])
-
-        return dish
+        with database.atomic():
+            DishIngredient.delete().where(DishIngredient.dish == dish).execute()
+            Dish.delete_by_id(dish.id)

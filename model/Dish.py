@@ -1,8 +1,12 @@
-class Dish(object):
-    def __init__(self, name, ingredients, idx=None):
-        self.idx = idx
-        self.name = name
-        self.ingredients = ingredients
+from peewee import *
+from model.BaseModel import BaseModel
+from model.Ingredient import Ingredient
 
-    def __str__(self):
-        return self.name
+
+class Dish(BaseModel):
+    id = AutoField(primary_key=True)
+    name = CharField()
+    ingredients = ManyToManyField(Ingredient, backref='dishes')
+
+    class Meta:
+        table_name = 'dishes'

@@ -6,10 +6,10 @@ class IngredientStorage:
         ingredients = IngredientRepository().get_ingredients()
         self.storage = {}
         for i in ingredients:
-            self.storage[i.idx] = i
+            self.storage[i.id] = i
 
     def to_update(self):
         ingredients = []
-        for idx, ing in self.storage.items():
-            ingredients.append((ing.count, ing.idx))
+        for id, ing in self.storage.items():
+            ingredients.append((ing.count, ing.id))
         return ingredients

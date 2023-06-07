@@ -101,14 +101,13 @@ class AdminWindow:
     def create_dish(self):
         try:
             name = self.name_input.get()
-            dish = Dish(name, self.selected_ingredients)
-            DishRepository().create(dish)
+            print(self.selected_ingredients)
+            DishRepository().create(name,self.selected_ingredients)
             messagebox.showinfo("Success", "Your dish was created!")
-            self.dishes.append(dish)
-            price = 0
-            for ing in dish.ingredients:
-                price += round((ing.price * ing.count / 1000) * (100 + OrderService.MARKUP) / 100)
-            self.edit_dishes.insert("end", dish.name + " " + str(price) + " UAH")
+            self.root.destroy()  # close the current window
+            self.root = tk.Tk()  # create another Tk instance
+            self.app = AdminWindow(self.root)  # create Demo2 window
+            self.root.mainloop()
         except Exception as ex:
             messagebox.showerror("Error", str(ex))
 
@@ -192,14 +191,14 @@ class AdminWindow:
         self.update_ingredients = IngredientService().get_ingredients()
         for i in self.ingredients:
             update_create_items.insert("end", i.name)
-        for ing, count in dish.ingredients:
+        for ing in dish.ingredients:
             for i in self.ingredients:
                 if i.name == ing.name:
                     update_create_items.selection_set(self.ingredients.index(i))
 
         price = 0
-        for ing, count in dish.ingredients:
-            price += round((ing.price * count / 1000) * (100 + OrderService.MARKUP) / 100)
+        for ing in dish.ingredients:
+            price += round((ing.price * 200 / 1000) * (100 + OrderService.MARKUP) / 100)
         price_text = tk.Label(edit_window)
         ft = tkFont.Font(family='Times', size=12)
         price_text["font"] = ft
@@ -213,8 +212,7 @@ class AdminWindow:
         try:
             self.dishes.remove(self.update_dish)
             self.update_dish.name = self.update_name_input.get()
-            self.update_dish.ingredients = self.update_selected_ingredients
-            DishRepository().update(self.update_dish)
+            DishRepository().update(self.update_dish, self.update_selected_ingredients)
             messagebox.showinfo("Success", "Your dish was updated!")
             price = 0
             for ing in self.update_dish.ingredients:
@@ -245,6 +243,7 @@ class AdminWindow:
         price = 0
         self.update_selected_ingredients = []
         for i in w.curselection():
+            print(i)
             ing = self.update_ingredients[i]
             ing.count = 200
             price += round((ing.price * ing.count / 1000) * (100 + OrderService.MARKUP) / 100)

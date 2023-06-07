@@ -1,6 +1,13 @@
-class Ingredient(object):
-    def __init__(self, name, price, count, idx=None):
-        self.idx = idx
-        self.name = name
-        self.price = price
-        self.count = count
+from peewee import *
+
+from model.BaseModel import BaseModel
+
+
+class Ingredient(BaseModel):
+    id = AutoField(primary_key=True)
+    name = CharField()
+    price = FloatField()
+    count = IntegerField()
+
+    class Meta:
+        table_name = 'ingredients'

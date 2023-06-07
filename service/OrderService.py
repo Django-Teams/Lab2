@@ -22,8 +22,8 @@ class OrderService:
         if len(overflow) != 0:
             raise ValueError("Недостатньо інградієнтів \"{}\"".format('\" \"'.join([i.name for i in overflow])))
         sum = self.get_dishes_sum(dishes)
-        order = Order(name, sum, dishes)
-        OrderRepository().create(order, self.ist.to_update())
+        order = Order(name=name, sum=sum, dishes=dishes)
+        OrderRepository().create(order)
 
         return order
 
@@ -50,18 +50,19 @@ class OrderService:
     def check_ingredients(self, dishes: list) -> list[Dish]:
         storage = {}
         for dish in dishes:
-            for ing, count in dish.ingredients:
-                if ing.idx in storage:
-                    storage[ing.idx] += count * dish.count
+            count = 200
+            for ing in dish.ingredients:
+                if ing.id in storage:
+                    storage[ing.id] += count * dish.count
                 else:
-                    storage[ing.idx] = count * dish.count
+                    storage[ing.id] = count * dish.count
 
         overflow = []
 
-        for idx, amount in storage.items():
-            if self.ist.storage[idx].count < amount:
-                overflow.append(self.ist.storage[idx])
-            self.ist.storage[idx].count -= amount
+        for id, amount in storage.items():
+            if self.ist.storage[id].count < amount:
+                overflow.append(self.ist.storage[id])
+            self.ist.storage[id].count -= amount
 
         return overflow
 
@@ -83,7 +84,8 @@ class OrderService:
         :return:
         """
         price = 0
-        for ing, count in dish.ingredients:
+        count = 200
+        for ing in dish.ingredients:
             price += round((ing.price * count / 1000) * (100 + self.MARKUP) / 100)
 
         return price
